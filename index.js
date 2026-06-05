@@ -49,10 +49,10 @@ reply সবসময় ছোট এবং natural হবে।
     
     const data = await response.json();
     const reply = data.choices[0].message.content.trim();
-    res.send(reply);
+    res.json({ reply: reply });
     
   } catch(err) {
-    res.send("ঠিক আছে");
+    res.json({ reply: "ঠিক আছে" });
   }
 });
 
