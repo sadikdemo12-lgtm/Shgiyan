@@ -36,7 +36,7 @@ app.post('/reply', async (req, res) => {
         'Authorization': `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "Grok 4.3",
         messages: [
           {
             role: "system",
