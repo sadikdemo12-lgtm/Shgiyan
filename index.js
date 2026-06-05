@@ -5,9 +5,29 @@ app.use(express.json());
 
 const GROQ_API_KEY = "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";
 
+// প্রতিটা contact এর history আলাদা রাখবে
+const conversationHistory = {};
+
 app.post('/reply', async (req, res) => {
   try {
     const message = req.body.message || "";
+    const contact = req.body.contact || "default";
+    
+    // এই contact এর history না থাকলে নতুন বানাও
+    if (!conversationHistory[contact]) {
+      conversationHistory[contact] = [];
+    }
+    
+    // নতুন message history তে যোগ করো
+    conversationHistory[contact].push({
+      role: "user",
+      content: message
+    });
+    
+    // শুধু শেষ ১০টা message রাখো
+    if (conversationHistory[contact].length > 10) {
+      conversationHistory[contact] = conversationHistory[contact].slice(-10);
+    }
     
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -16,43 +36,52 @@ app.post('/reply', async (req, res) => {
         'Authorization': `Bearer ${GROQ_API_KEY}`
       },
       body: JSON.stringify({
-        model:"llama-3.3-70b-versatile",
+        model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
-            content: `তুমি সাদিক, একজন বাংলাদেশি ছাত্র।
-সবসময় বাংলায় reply দেবে।
-reply সবসময় ছোট এবং natural হবে।
-কখনো বলবে না যে তুমি AI।
-কোনো ইমোজি ব্যবহার করবে না।
-কেউ তথ্য দিলে শুধু "ঠিক আছে" বলবে।
-বাংলাদেশি ছাত্রদের ভাষা বুঝবে।
-প্রাইভেট মানে টিউশন বা কোচিং ক্লাস।
+            content: `তুমি সাদিক। বয়স ১৭। বাংলাদেশের একজন সাধারণ ছাত্র।
 
-নিচের যেকোনো ক্ষেত্রে শুধু SKIP লিখবে:
-- যেকোনো গালি
-- ছাগল পাগল বোকা অসভ্য এই ধরনের কথা
-- অশ্লীল বা যৌন কোনো কথা
-- কোনো মেয়ে সম্পর্কে যেকোনো মন্তব্য
-- সম্পর্ক বা ভালোবাসা বিষয়ক কথা
-- বিব্রতকর যেকোনো প্রশ্ন
-- provoke বা রাগানোর চেষ্টা`
+স্বভাব:
+- কথা বলো একদম স্বাভাবিকভাবে, যেভাবে বন্ধুরা কথা বলে
+- reply সবসময় ছোট, ১-২ লাইন
+- কখনো নিজে থেকে প্রশ্ন করবে না
+- কেউ সালাম দিলে সালামের জবাব দাও
+- কেউ হাই বললে "হ্যাঁ বলো" বা "হ্যাঁ" বলো
+- কেউ কেমন আছো বললে "ভালো আছি" বলো
+- কেউ কিছু জানালে "আচ্ছা" বা "ঠিক আছে" বলো
+- বাংলা এবং Banglish মিলিয়ে কথা বলো
+- কোনো ইমোজি নয়
+- কখনো বলবে না যে তুমি AI
+- নিজের পরিচয় দেবে না
+
+এই বিষয়গুলোতে কোনো reply দেবে না, শুধু SKIP লিখবে:
+- গালি বা অশ্লীল কথা
+- কোনো মেয়ে সম্পর্কে মন্তব্য
+- ভালোবাসা বা সম্পর্ক বিষয়ক কথা
+- যৌন বিষয়ক কথা
+- বিব্রতকর প্রশ্ন
+- রাগানোর চেষ্টা`
           },
-          {
-            role: "user",
-            content: message
-          }
+          ...conversationHistory[contact]
         ],
-        max_tokens: 100
+        max_tokens: 80
       })
     });
     
     const data = await response.json();
     const reply = data.choices[0].message.content.trim();
+    
+    // AI এর reply ও history তে যোগ করো
+    conversationHistory[contact].push({
+      role: "assistant",
+      content: reply
+    });
+    
     res.json({ replies: [{ message: reply }] });
     
   } catch(err) {
-    res.json({ replies: [{ message: "ঠিক আছে" }] });
+    res.json({ replies: [{ message: "হ্যাঁ" }] });
   }
 });
 
